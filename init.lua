@@ -4,8 +4,7 @@
 ==================== READ THIS BEFORE CONTINUING ====================
 =====================================================================
 ========                                    .-----.          ========
-========         .----------------------.   | === |          ========
-========         |.-""""""""""""""""""-.|   |-----|          ========
+========         .----------------------.   | === |          ======== ========         |.-""""""""""""""""""-.|   |-----|          ========
 ========         ||                    ||   | === |          ========
 ========         ||   KICKSTART.NVIM   ||   |-----|          ========
 ========         ||                    ||   | === |          ========
@@ -142,8 +141,8 @@ vim.opt.splitbelow = true
 -- Sets how neovim will display certain whitespace characters in the editor.
 --  See `:help 'list'`
 --  and `:help 'listchars'`
-vim.opt.list = true
-vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+--vim.opt.list = true
+--vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'
@@ -155,7 +154,22 @@ vim.opt.cursorline = true
 vim.opt.scrolloff = 10
 
 -- user opts
+vim.opt.expandtab = true
+vim.opt.linebreak = true
+vim.opt.showbreak = '+++'
+vim.opt.showmatch = true
+vim.opt.visualbell = true
+vim.opt.incsearch = true
+vim.opt.autoindent = true
+vim.opt.shiftwidth = 2
+vim.opt.smartindent = true
+vim.opt.ruler = true
+vim.opt.softtabstop = 2
+vim.opt.tabstop = 2
+vim.opt.undolevels = 1000
+vim.opt.backspace = 'indent,eol,start'
 vim.opt.colorcolumn = '80'
+vim.opt.conceallevel = 2
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
@@ -213,6 +227,13 @@ if not vim.loop.fs_stat(lazypath) then
   vim.fn.system { 'git', 'clone', '--filter=blob:none', '--branch=stable', lazyrepo, lazypath }
 end ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
+
+-- GODOT project detection
+local projectfile = vim.fn.getcwd() .. '/project.godot'
+local hostfile = './godothost'
+if vim.fn.findfile(projectfile) ~= '' and vim.fn.findfile(hostfile) == '' then
+  vim.fn.serverstart(hostfile)
+end
 
 -- [[ Configure and install plugins ]]
 --
@@ -529,6 +550,7 @@ require('lazy').setup({
       --  So, we create new capabilities with nvim cmp, and then broadcast that to the servers.
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
+      require('lspconfig').gdscript.setup(capabilities)
 
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
@@ -572,15 +594,22 @@ require('lazy').setup({
         deno = {},
         grammarly = {},
         prettier = {},
+        ruff_lsp = { capabilities = { hoverProvider = false } },
         pyright = {},
         rust_analyzer = {},
-        omnisharp_mono = {},
+        jdtls = {},
+        omnisharp_mono = {
+          flags = {
+            debounce_text_changes = 150,
+          },
+          cmd = { '/home/andrei/.local/share/nvim/mason/bin/omnisharp-mono', '--languageserver' },
+        },
+        astro = {},
       }
 
       -- Ensure the servers and tools above are installed
       --  To check the current status of installed tools and/or manually install
-      --  other tools, you can run
-      --    :Mason
+      --  other tools, you can run --    :Mason
       --
       --  You can press `g?` for help in this menu.
       require('mason').setup()
@@ -590,6 +619,13 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'black',
+        'clang-format',
+        'google-java-format',
+        'prettier',
+        'rustfmt',
+        'sqlfmt',
+        'ruff',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -636,12 +672,14 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        python = { 'black' },
+        python = { 'ruff_format' },
         --
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
         javascript = { { 'prettierd', 'prettier' } },
         c = { 'clang-format' },
+        rust = { 'rustfmt' },
+        java = { 'google-java-format' },
       },
     },
   },
@@ -666,12 +704,12 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+            end,
+          },
         },
       },
       'saadparwaiz1/cmp_luasnip',
@@ -813,7 +851,23 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc', 'python', 'typescript', 'javascript' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'vim',
+        'vimdoc',
+        'python',
+        'java',
+        'typescript',
+        'javascript',
+        'gdscript',
+        'godot_resource',
+        'gdshader',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
